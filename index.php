@@ -21,11 +21,12 @@ if (isset($_GET['q'])) {
         }
         $searchQuery = trim($searchQuery);
         
-        // Use MATCH() AGAINST() for ordering by relevance, and extract a snippet
+        // Search the pdf_pages table and join with pdf_files
         $stmt = $db->prepare('
-            SELECT file_path, content, MATCH(content) AGAINST(? IN BOOLEAN MODE) as score
-            FROM pdf_search 
-            WHERE MATCH(content) AGAINST(? IN BOOLEAN MODE)
+            SELECT f.file_path, p.page_number, p.content, MATCH(p.content) AGAINST(? IN BOOLEAN MODE) as score
+            FROM pdf_pages p
+            JOIN pdf_files f ON p.file_id = f.id
+            WHERE MATCH(p.content) AGAINST(? IN BOOLEAN MODE)
             ORDER BY score DESC
             LIMIT 50
         ');
@@ -46,7 +47,6 @@ if (isset($_GET['q'])) {
             $dir = dirname('/' . $relPath);
             if ($dir === '\\' || $dir === '/') $dir = '/';
             
-            // Generate a small context snippet based on the first matched word
             $snippet = '';
             $firstWord = preg_replace('/[^a-zA-Z0-9_.-]/', '', $words[0]);
             if (!empty($firstWord)) {
@@ -55,7 +55,6 @@ if (isset($_GET['q'])) {
                     $start = max(0, $pos - 40);
                     $length = 100;
                     $snippetText = substr($row['content'], $start, $length);
-                    // Encode for HTML to prevent XSS, then highlight the word
                     $snippetText = htmlspecialchars($snippetText);
                     $snippetText = preg_replace('/(' . preg_quote($firstWord, '/') . ')/i', '<strong style="color:var(--red);">$1</strong>', $snippetText);
                     $snippet = '... ' . $snippetText . ' ...';
@@ -65,14 +64,14 @@ if (isset($_GET['q'])) {
             $results[] = [
                 'name' => basename($fullPath),
                 'dir'  => $dir,
-                'path' => '/' . ltrim($urlPath, '/'),
+                'path' => '/' . ltrim($urlPath, '/') . '#page=' . $row['page_number'],
+                'page' => $row['page_number'],
                 'size' => round(filesize($fullPath) / 1024 / 1024, 2) . ' MB',
                 'snippet' => $snippet
             ];
         }
         echo json_encode($results);
     } catch (Exception $e) {
-        // Fallback to empty array on DB error
         echo json_encode([]);
     }
     exit;
@@ -223,7 +222,8 @@ foreach ($parts as $part) {
         .autocomplete-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem; gap: 1rem; }
         .autocomplete-name { font-family: var(--font-sans); font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--head); }
         .autocomplete-dir { font-family: var(--font-mono); font-size: 0.7rem; color: var(--amber); white-space: nowrap; flex-shrink: 0; }
-        .autocomplete-snippet { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); line-height: 1.4; word-break: break-word; }
+        .autocomplete-page { background: var(--red); color: white; padding: 0.1rem 0.4rem; border-radius: 2px; font-size: 0.65rem; font-family: var(--font-mono); font-weight: 600; margin-left: 0.5rem; }
+        .autocomplete-snippet { font-family: var(--font-mono); font-size: 0.8rem; color: var(--txt-dim); line-height: 1.4; word-break: break-word; }
         .autocomplete-empty { padding: 1rem; text-align: center; color: var(--muted); font-family: var(--font-mono); font-size: 0.85rem; }
         .autocomplete-loader { padding: 1rem; text-align: center; color: var(--amber); font-family: var(--font-mono); font-size: 0.85rem; }
 
@@ -278,7 +278,7 @@ foreach ($parts as $part) {
 
             <div class="search-container">
                 <span class="material-icons search-icon">search</span>
-                <input type="search" id="deepSearch" placeholder="Search all manuals (e.g., 'torque b16')..." autocomplete="off">
+                <input type="search" id="deepSearch" placeholder="Search content inside all manuals..." autocomplete="off">
                 <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
             </div>
 
@@ -357,12 +357,13 @@ foreach ($parts as $part) {
                                 a.target = '_blank';
                                 
                                 var snippetHtml = item.snippet ? '<div class="autocomplete-snippet">' + item.snippet + '</div>' : '';
+                                var pageHtml = '<span class="autocomplete-page">PAGE ' + item.page + '</span>';
                                 
                                 a.innerHTML = 
                                     '<span class="material-icons autocomplete-icon">description</span>' +
                                     '<div class="autocomplete-content">' +
                                         '<div class="autocomplete-header">' +
-                                            '<span class="autocomplete-name">' + item.name + '</span>' +
+                                            '<span class="autocomplete-name">' + item.name + pageHtml + '</span>' +
                                             '<span class="autocomplete-dir">' + item.dir + '</span>' +
                                         '</div>' +
                                         snippetHtml +
