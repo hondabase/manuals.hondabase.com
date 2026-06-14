@@ -11,7 +11,7 @@ if (isset($_GET['q'])) {
     }
 
     try {
-        $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'root', '');
+        $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'manuals_usr', 'manuals_pass');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         
         // Use Boolean Mode to allow partial matching on full words

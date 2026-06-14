@@ -1,6 +1,6 @@
 <?php
 $root = '/var/www/manuals.hondabase.com';
-$db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'root', '');
+$db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'manuals_usr', 'manuals_pass');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/cars'));
