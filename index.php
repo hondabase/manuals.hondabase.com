@@ -1,7 +1,7 @@
 <?php
 $root = '/var/www/manuals.hondabase.com';
 
-// --- AJAX Deep Search Endpoint ---
+// --- AJAX Deep Search Endpoint using MariaDB ---
 if (isset($_GET['q'])) {
     header('Content-Type: application/json');
     $q = trim($_GET['q']);
@@ -9,36 +9,55 @@ if (isset($_GET['q'])) {
         echo json_encode([]);
         exit;
     }
-    
-    $qSafe = preg_replace('/[^a-zA-Z0-9 _.-]/', '', $q);
-    if (empty($qSafe)) {
+
+    try {
+        $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'root', '');
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Use Boolean Mode to allow partial matching on full words
+        // Prepend + and append * to each word for required prefix matching
+        $words = preg_split('/\s+/', $q);
+        $searchQuery = '';
+        foreach ($words as $word) {
+            $searchQuery .= '+' . preg_replace('/[^a-zA-Z0-9_.-]/', '', $word) . '* ';
+        }
+        $searchQuery = trim($searchQuery);
+        
+        $stmt = $db->prepare('
+            SELECT file_path
+            FROM pdf_search 
+            WHERE MATCH(content) AGAINST(? IN BOOLEAN MODE)
+            LIMIT 50
+        ');
+        $stmt->execute([$searchQuery]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $results = [];
+        foreach ($rows as $row) {
+            $relPath = ltrim($row['file_path'], '/');
+            $fullPath = $root . '/' . $relPath;
+            
+            if (!file_exists($fullPath)) continue;
+            
+            $pathParts = explode('/', $relPath);
+            $encodedPathParts = array_map('rawurlencode', $pathParts);
+            $urlPath = implode('/', $encodedPathParts);
+            
+            $dir = dirname('/' . $relPath);
+            if ($dir === '\\' || $dir === '/') $dir = '/';
+            
+            $results[] = [
+                'name' => basename($fullPath),
+                'dir'  => $dir,
+                'path' => '/' . ltrim($urlPath, '/'),
+                'size' => round(filesize($fullPath) / 1024 / 1024, 2) . ' MB',
+            ];
+        }
+        echo json_encode($results);
+    } catch (Exception $e) {
+        // Fallback to empty array on DB error
         echo json_encode([]);
-        exit;
     }
-
-    $command = 'find ' . escapeshellarg($root) . ' -type f -iname ' . escapeshellarg('*' . $qSafe . '*') . ' -not -name "index.php" -not -path "*/\.*" | head -n 50';
-    exec($command, $output);
-
-    $results = [];
-    foreach ($output as $line) {
-        if (!file_exists($line)) continue;
-        
-        $relPath = ltrim(substr($line, strlen($root)), DIRECTORY_SEPARATOR);
-        $pathParts = explode(DIRECTORY_SEPARATOR, $relPath);
-        $encodedPathParts = array_map('rawurlencode', $pathParts);
-        $urlPath = implode('/', $encodedPathParts);
-        
-        $dir = dirname('/' . $relPath);
-        if ($dir === '\\' || $dir === DIRECTORY_SEPARATOR) $dir = '/';
-        
-        $results[] = [
-            'name' => basename($line),
-            'dir'  => $dir,
-            'path' => '/' . ltrim($urlPath, '/'),
-            'size' => round(filesize($line) / 1024 / 1024, 2) . ' MB',
-        ];
-    }
-    echo json_encode($results);
     exit;
 }
 // --- End AJAX Endpoint ---
@@ -82,7 +101,7 @@ if ($requestUri !== '/') {
 }
 
 foreach ($items as $item) {
-    if ($item === '.' || $item === '..' || $item === 'index.php' || strpos($item, '.') === 0) continue;
+    if ($item === '.' || $item === '..' || $item === 'index.php' || strpos($item, '.') === 0 || $item === 'indexer.php') continue;
     
     $fullPath = $path . DIRECTORY_SEPARATOR . $item;
     $relPath = ltrim(substr($fullPath, strlen($root)), DIRECTORY_SEPARATOR);
