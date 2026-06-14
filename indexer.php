@@ -5,18 +5,11 @@ $webhookUrl = 'https://discord.com/api/webhooks/1515689249922613351/S15-0DnXqdkr
 function getDb() {
     $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'manuals_usr', 'manuals_pass');
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    // Increase packet size for this session
     return $db;
 }
 
-function notifyDiscord($url, $file, $needsOcr, $duration) {
+function notifyDiscord($url, $msg) {
     if (!$url) return;
-    $method = $needsOcr ? 'Tesseract OCR' : 'Standard Extraction';
-    $msg = "📚 **Indexed PDF:** `" . basename($file) . "`\n" . 
-           "📂 **Path:** `" . dirname($file) . "`\n" . 
-           "⚙️ **Method:** " . $method . "\n" . 
-           "⏱️ **Time taken:** " . round($duration, 2) . "s";
-           
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_POST, 1);
@@ -47,7 +40,6 @@ foreach ($pdfFiles as $i => $file) {
         $stmtCheck = $db->prepare('SELECT last_modified FROM pdf_search WHERE file_path = ?');
         $stmtCheck->execute([$relPath]);
     } catch (PDOException $e) {
-        // Reconnect if connection lost
         $db = getDb();
         $stmtCheck = $db->prepare('SELECT last_modified FROM pdf_search WHERE file_path = ?');
         $stmtCheck->execute([$relPath]);
@@ -58,8 +50,10 @@ foreach ($pdfFiles as $i => $file) {
         continue;
     }
     
-    echo "Indexing [" . ($i+1) . "/" . count($pdfFiles) . "]: $relPath\n";
     $startTime = microtime(true);
+    $filename = basename($file);
+    
+    echo "Indexing [" . ($i+1) . "/" . count($pdfFiles) . "]: $relPath\n";
     
     $cmd = 'pdftotext ' . escapeshellarg($file) . ' - 2>/dev/null';
     $text = shell_exec($cmd);
@@ -73,42 +67,50 @@ foreach ($pdfFiles as $i => $file) {
     }
     
     if ($needsOcr) {
-        echo "  -> Text is very short or empty. Attempting OCR...\n";
+        $pageCount = (int)shell_exec("pdfinfo " . escapeshellarg($file) . " | grep Pages | awk '{print $2}'");
+        notifyDiscord($webhookUrl, "🔍 **Starting OCR:** `$filename` ($pageCount pages)... this may take a while.");
+        
+        echo "  -> Attempting OCR on $pageCount pages...\n";
         $tmpDir = sys_get_temp_dir() . '/ocr_' . uniqid();
         mkdir($tmpDir);
         
-        $cmd = 'pdftoppm -r 150 -jpeg ' . escapeshellarg($file) . ' ' . escapeshellarg($tmpDir . '/page') . ' 2>/dev/null';
-        shell_exec($cmd);
-        
-        $images = glob($tmpDir . '/page-*.jpg');
+        // Process in batches of 50 pages to show progress
         $ocrText = '';
-        foreach ($images as $img) {
-            $cmd = 'tesseract ' . escapeshellarg($img) . ' stdout -l eng quiet 2>/dev/null';
-            $ocrText .= shell_exec($cmd) . " ";
-            unlink($img);
+        for ($p = 1; $p <= $pageCount; $p += 50) {
+            $last = min($p + 49, $pageCount);
+            echo "     -> Processing pages $p to $last...\n";
+            
+            $cmd = "pdftoppm -f $p -l $last -r 150 -jpeg " . escapeshellarg($file) . " " . escapeshellarg($tmpDir . '/page') . " 2>/dev/null";
+            shell_exec($cmd);
+            
+            $images = glob($tmpDir . '/page-*.jpg');
+            foreach ($images as $img) {
+                $cmd = 'tesseract ' . escapeshellarg($img) . ' stdout -l eng quiet 2>/dev/null';
+                $ocrText .= shell_exec($cmd) . " ";
+                unlink($img);
+            }
+            
+            if ($pageCount > 100) {
+                notifyDiscord($webhookUrl, "⏳ **OCR Progress:** `$filename` ($last/$pageCount pages complete)");
+            }
         }
-        
-        $images = glob($tmpDir . '/page-*.jpg');
-        foreach ($images as $img) { unlink($img); }
         rmdir($tmpDir);
-        
         $text .= " " . trim($ocrText);
     }
     
     $text = preg_replace('/[\s]+/', ' ', $text);
     
-    // Insert/Update
     try {
         $stmtInsert = $db->prepare('INSERT INTO pdf_search (file_path, content, last_modified) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE content = VALUES(content), last_modified = VALUES(last_modified)');
         $stmtInsert->execute([$relPath, $text, $mtime]);
     } catch (PDOException $e) {
-        // Reconnect if connection lost
         $db = getDb();
         $stmtInsert = $db->prepare('INSERT INTO pdf_search (file_path, content, last_modified) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE content = VALUES(content), last_modified = VALUES(last_modified)');
         $stmtInsert->execute([$relPath, $text, $mtime]);
     }
     
     $duration = microtime(true) - $startTime;
-    notifyDiscord($webhookUrl, $relPath, $needsOcr, $duration);
+    $method = $needsOcr ? 'Tesseract OCR' : 'Standard Extraction';
+    notifyDiscord($webhookUrl, "✅ **Indexed:** `$filename` ($method, " . round($duration, 2) . "s)");
 }
 echo "Indexing complete.\n";
