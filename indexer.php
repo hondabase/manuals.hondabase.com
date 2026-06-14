@@ -3,6 +3,25 @@ $root = '/var/www/manuals.hondabase.com';
 $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'manuals_usr', 'manuals_pass');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+$webhookUrl = 'https://discord.com/api/webhooks/1515689249922613351/S15-0DnXqdkrP_AjGnUX6zb6jq7e1wlnbBmxo8ZbZRJKp4LS58cboZpuE92s0rHYX90s';
+
+function notifyDiscord($url, $file, $needsOcr, $duration) {
+    if (!$url) return;
+    $method = $needsOcr ? 'Tesseract OCR' : 'Standard Extraction';
+    $msg = "📚 **Indexed PDF:** `" . basename($file) . "`\n" . 
+           "📂 **Path:** `" . dirname($file) . "`\n" . 
+           "⚙️ **Method:** " . $method . "\n" . 
+           "⏱️ **Time taken:** " . round($duration, 2) . "s";
+           
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['content' => $msg]));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/cars'));
 $pdfFiles = [];
 foreach ($iterator as $file) {
@@ -28,6 +47,7 @@ foreach ($pdfFiles as $i => $file) {
     }
     
     echo "Indexing [" . ($i+1) . "/" . count($pdfFiles) . "]: $relPath\n";
+    $startTime = microtime(true);
     
     $cmd = 'pdftotext ' . escapeshellarg($file) . ' - 2>/dev/null';
     $text = shell_exec($cmd);
@@ -70,5 +90,8 @@ foreach ($pdfFiles as $i => $file) {
     $text = preg_replace('/[\s]+/', ' ', $text);
     
     $stmtInsert->execute([$relPath, $text, $mtime]);
+    
+    $duration = microtime(true) - $startTime;
+    notifyDiscord($webhookUrl, $relPath, $needsOcr, $duration);
 }
 echo "Indexing complete.\n";
