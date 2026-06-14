@@ -14,8 +14,6 @@ if (isset($_GET['q'])) {
         $db = new PDO('mysql:host=localhost;dbname=manuals_db;charset=utf8mb4', 'manuals_usr', 'manuals_pass');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         
-        // Use Boolean Mode to allow partial matching on full words
-        // Prepend + and append * to each word for required prefix matching
         $words = preg_split('/\s+/', $q);
         $searchQuery = '';
         foreach ($words as $word) {
@@ -23,13 +21,15 @@ if (isset($_GET['q'])) {
         }
         $searchQuery = trim($searchQuery);
         
+        // Use MATCH() AGAINST() for ordering by relevance, and extract a snippet
         $stmt = $db->prepare('
-            SELECT file_path
+            SELECT file_path, content, MATCH(content) AGAINST(? IN BOOLEAN MODE) as score
             FROM pdf_search 
             WHERE MATCH(content) AGAINST(? IN BOOLEAN MODE)
+            ORDER BY score DESC
             LIMIT 50
         ');
-        $stmt->execute([$searchQuery]);
+        $stmt->execute([$searchQuery, $searchQuery]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $results = [];
@@ -46,11 +46,28 @@ if (isset($_GET['q'])) {
             $dir = dirname('/' . $relPath);
             if ($dir === '\\' || $dir === '/') $dir = '/';
             
+            // Generate a small context snippet based on the first matched word
+            $snippet = '';
+            $firstWord = preg_replace('/[^a-zA-Z0-9_.-]/', '', $words[0]);
+            if (!empty($firstWord)) {
+                $pos = stripos($row['content'], $firstWord);
+                if ($pos !== false) {
+                    $start = max(0, $pos - 40);
+                    $length = 100;
+                    $snippetText = substr($row['content'], $start, $length);
+                    // Encode for HTML to prevent XSS, then highlight the word
+                    $snippetText = htmlspecialchars($snippetText);
+                    $snippetText = preg_replace('/(' . preg_quote($firstWord, '/') . ')/i', '<strong style="color:var(--red);">$1</strong>', $snippetText);
+                    $snippet = '... ' . $snippetText . ' ...';
+                }
+            }
+            
             $results[] = [
                 'name' => basename($fullPath),
                 'dir'  => $dir,
                 'path' => '/' . ltrim($urlPath, '/'),
                 'size' => round(filesize($fullPath) / 1024 / 1024, 2) . ' MB',
+                'snippet' => $snippet
             ];
         }
         echo json_encode($results);
@@ -185,15 +202,15 @@ foreach ($parts as $part) {
             border-top: none;
             border-radius: 0 0 0.25rem 0.25rem;
             z-index: 50;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             display: none;
         }
         .autocomplete-item {
             display: flex;
-            align-items: center;
-            padding: 0.75rem 1rem;
+            align-items: flex-start;
+            padding: 1rem;
             text-decoration: none;
             color: var(--txt);
             border-bottom: 1px solid var(--border-2);
@@ -201,9 +218,12 @@ foreach ($parts as $part) {
         }
         .autocomplete-item:last-child { border-bottom: none; }
         .autocomplete-item:hover { background: var(--panel-hover); }
-        .autocomplete-icon { margin-right: 0.75rem; color: var(--amber); font-size: 1.2rem; }
-        .autocomplete-name { flex-grow: 1; font-family: var(--font-sans); font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .autocomplete-dir { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); white-space: nowrap; margin-left: 1rem; }
+        .autocomplete-icon { margin-right: 1rem; color: var(--amber); font-size: 1.5rem; margin-top: 0.2rem; }
+        .autocomplete-content { flex-grow: 1; min-width: 0; }
+        .autocomplete-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem; gap: 1rem; }
+        .autocomplete-name { font-family: var(--font-sans); font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--head); }
+        .autocomplete-dir { font-family: var(--font-mono); font-size: 0.7rem; color: var(--amber); white-space: nowrap; flex-shrink: 0; }
+        .autocomplete-snippet { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); line-height: 1.4; word-break: break-word; }
         .autocomplete-empty { padding: 1rem; text-align: center; color: var(--muted); font-family: var(--font-mono); font-size: 0.85rem; }
         .autocomplete-loader { padding: 1rem; text-align: center; color: var(--amber); font-family: var(--font-mono); font-size: 0.85rem; }
 
@@ -224,6 +244,7 @@ foreach ($parts as $part) {
         
         @media (max-width: 600px) {
             .item-meta, .autocomplete-dir { display: none; }
+            .autocomplete-header { flex-direction: column; gap: 0.2rem; }
         }
     </style>
 </head>
@@ -257,7 +278,7 @@ foreach ($parts as $part) {
 
             <div class="search-container">
                 <span class="material-icons search-icon">search</span>
-                <input type="search" id="deepSearch" placeholder="Search all manuals..." autocomplete="off">
+                <input type="search" id="deepSearch" placeholder="Search all manuals (e.g., 'torque b16')..." autocomplete="off">
                 <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
             </div>
 
@@ -335,10 +356,17 @@ foreach ($parts as $part) {
                                 a.className = 'autocomplete-item';
                                 a.target = '_blank';
                                 
+                                var snippetHtml = item.snippet ? '<div class="autocomplete-snippet">' + item.snippet + '</div>' : '';
+                                
                                 a.innerHTML = 
                                     '<span class="material-icons autocomplete-icon">description</span>' +
-                                    '<span class="autocomplete-name">' + item.name + '</span>' +
-                                    '<span class="autocomplete-dir">' + item.dir + '</span>';
+                                    '<div class="autocomplete-content">' +
+                                        '<div class="autocomplete-header">' +
+                                            '<span class="autocomplete-name">' + item.name + '</span>' +
+                                            '<span class="autocomplete-dir">' + item.dir + '</span>' +
+                                        '</div>' +
+                                        snippetHtml +
+                                    '</div>';
                                 dropdown.appendChild(a);
                             });
                         })
