@@ -1,0 +1,14 @@
+cars/
+*.pdf
+*.jpg
+*.png
+*.gif
+
+# Secrets / local config
+config.local.php
+
+# Runtime log
+indexer.log
+
+# R2 credentials
+.rclone.conf

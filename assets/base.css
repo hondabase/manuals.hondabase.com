@@ -1,0 +1,197 @@
+/* Hondabase manuals shell styles.
+   Kept local because the old https://hondabase.com/assets/base.css path no longer exists. */
+:root {
+    --bg: #0a0a0b;
+    --bg-2: #0c0c0e;
+    --panel: rgba(24, 24, 27, 0.55);
+    --panel-hover: rgba(39, 39, 42, 0.6);
+    --border: #27272a;
+    --border-2: #3f3f46;
+    --txt: #e4e4e7;
+    --txt-dim: #a1a1aa;
+    --dim: #a1a1aa;
+    --muted: #71717a;
+    --head: #f4f4f5;
+    --red: #e10600;
+    --amber: #fbbf24;
+    --amber-2: #fcd34d;
+    --font-display: "Chakra Petch", system-ui, sans-serif;
+    --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--txt);
+    background: var(--bg);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px);
+}
+
+a {
+    color: var(--amber);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--amber-2);
+}
+
+.wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+}
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+}
+
+.site-header .wrap {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 4rem;
+    flex-wrap: wrap;
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.brand h1 {
+    margin: 0;
+    color: var(--head);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.brand h1 b {
+    color: var(--red);
+    font-weight: 700;
+}
+
+.brand p {
+    margin: 0;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+}
+
+.nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.nav a {
+    color: var(--dim);
+}
+
+.nav a:hover {
+    color: var(--amber);
+}
+
+section {
+    padding: 2.25rem 0;
+}
+
+.section-head {
+    color: var(--head);
+    font-family: var(--font-display);
+}
+
+.site-footer {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.site-footer .wrap {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 1.4rem;
+    padding-bottom: 1.4rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+}
+
+.site-footer b {
+    color: var(--dim);
+    font-weight: 400;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-2);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--amber);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-2) var(--bg-2);
+}
+
+@media (max-width: 640px) {
+    .site-header .wrap {
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .nav {
+        width: 100%;
+        margin-left: 0;
+        gap: 0.85rem;
+    }
+}
