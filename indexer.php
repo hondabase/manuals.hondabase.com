@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/config.local.php';
+require __DIR__ . '/git_sync.php';
 $root = '/var/www/manuals.hondabase.com';
 $webhookUrl = DISCORD_WEBHOOK_URL;
 
@@ -64,7 +65,11 @@ function r2Upload(string $localPath, string $carsRelPath): bool {
 
 $db = getDb();
 
-$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/cars'));
+$dirIterator = new RecursiveDirectoryIterator($root . '/cars', RecursiveDirectoryIterator::SKIP_DOTS);
+$filteredIterator = new RecursiveCallbackFilterIterator($dirIterator, function ($current) {
+    return $current->getFilename() !== '.git';
+});
+$iterator = new RecursiveIteratorIterator($filteredIterator);
 $pdfFiles = [];
 foreach ($iterator as $file) {
     if ($file->isFile() && strtolower($file->getExtension()) === 'pdf') {
@@ -73,6 +78,8 @@ foreach ($iterator as $file) {
 }
 
 echo "Found " . count($pdfFiles) . " PDF files.\n";
+
+$processedCount = 0;
 
 foreach ($pdfFiles as $i => $file) {
     $relPath = ltrim(substr($file, strlen($root)), '/');
@@ -187,9 +194,16 @@ foreach ($pdfFiles as $i => $file) {
     $carsRelPath = str_starts_with($relPath, 'cars/') ? substr($relPath, 5) : $relPath;
     catalogFile($db, $carsRelPath, filesize($file));
     r2Upload($file, $carsRelPath);
+    $processedCount++;
 
     $duration = microtime(true) - $startTime;
     $method = $needsOcr ? 'Tesseract OCR' : 'Standard Extraction';
     notifyDiscord($webhookUrl, "✅ **Indexed:** `$filename` (" . ($needsOcr ? $pageCount : count($pages)) . " pages, $method, " . round($duration, 2) . "s)");
 }
+
+if ($processedCount > 0) {
+    echo "Committing $processedCount file(s) to the archive mirror...\n";
+    manuals_git_commit_all("Index run: $processedCount file(s) added/updated (" . date('Y-m-d H:i') . ')');
+}
+
 echo "Indexing complete.\n";
