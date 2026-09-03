@@ -133,6 +133,17 @@ if ($underCars) {
         exit;
     }
 
+    // If the folder itself has an index.html (e.g. an extracted HTML manual),
+    // serve that page instead of the directory listing.
+    $indexStmt = $db->prepare('SELECT 1 FROM files WHERE folder_id <=> ? AND name = ?');
+    $indexStmt->execute([$parentId, 'index.html']);
+    if ($indexStmt->fetch()) {
+        $cdnKey = implode('/', array_map('rawurlencode', $carsParts));
+        $cdnKey = ($cdnKey === '' ? '' : $cdnKey . '/') . 'index.html';
+        header('Location: https://cdn.hondabase.com/manuals/' . $cdnKey, true, 302);
+        exit;
+    }
+
     $directories = [];
     $files = [];
 
