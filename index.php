@@ -214,7 +214,9 @@ if ($underCars) {
     }
 
     foreach ($items as $item) {
-        if ($item === '.' || $item === '..' || $item === 'index.php' || strpos($item, '.') === 0 || $item === 'indexer.php') continue;
+        if ($item === '.' || $item === '..' || $item === 'assets' || strpos($item, '.') === 0) continue;
+        // Only serve real app content (cars/) — never list this app's own PHP/config/docs.
+        if (strtolower(pathinfo($item, PATHINFO_EXTENSION)) === 'php' || !is_dir($path . DIRECTORY_SEPARATOR . $item)) continue;
 
         $fullPath = $path . DIRECTORY_SEPARATOR . $item;
         $relPath = ltrim(substr($fullPath, strlen($root)), DIRECTORY_SEPARATOR);
