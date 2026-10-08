@@ -98,6 +98,40 @@ if ($underCars) {
     $relative = trim($relative, '/');
     $carsParts = $relative === '' ? [] : explode('/', $relative);
 
+    // Legacy redirects (301) for moved or restructured folders/files
+    $legacyRedirects = [
+        'honda/civic/2011-2016' => 'honda/civic/2012-2015_9th_Gen',
+    ];
+    $legacyFileMapping = [
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT-Road_Test_3412.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT-Road_Test_3412.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_Electronic_Control_System_Circuit_Diagram_3777.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_Electronic_Control_System_Circuit_Diagram_3777.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Component_Location_Index_4588.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Component_Location_Index_4588.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Description-Electronic_Control_System_4258.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Description-Electronic_Control_System_4258.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Description-General_Operation_4257.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Description-General_Operation_4257.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Description-Hydraulic_Controls_4259.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Description-Hydraulic_Controls_4259.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Description-Lock-Up_System_4267.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Description-Lock-Up_System_4267.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Symptom_Troubleshooting_Index_3783.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Symptom_Troubleshooting_Index_3783.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-DomeLight.pdf' => 'honda/civic/2012-2015_9th_Gen/2012-2015_Honda_Civic-DomeLight.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-Entry_Lights_Control_System_Circuit_Diagram_2929.pdf' => 'honda/civic/2012-2015_9th_Gen/2012-2015_Honda_Civic-Entry_Lights_Control_System_Circuit_Diagram_2929.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-Entry_Lights_Control_System_MICU_Input_Test_2932.pdf' => 'honda/civic/2012-2015_9th_Gen/2012-2015_Honda_Civic-Entry_Lights_Control_System_MICU_Input_Test_2932.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-How_to_Troubleshoot_the_CVT_System_3775.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-How_to_Troubleshoot_the_CVT_System_3775.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-Interior_Lights_System_Description-Control_Function_4195.pdf' => 'honda/civic/2012-2015_9th_Gen/2012-2015_Honda_Civic-Interior_Lights_System_Description-Control_Function_4195.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-PCM_CVT_Control_System_PCM_Connector_for_Inputs_and_Outputs_3776.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-PCM_CVT_Control_System_PCM_Connector_for_Inputs_and_Outputs_3776.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-RemoteStart.pdf' => 'honda/civic/2012-2015_9th_Gen/2014_Honda_Civic-RemoteStart.pdf',
+        'honda/civic/2011-2016/2011-2016_Honda_Civic-Shift_Position_Indicator_Circuit_Diagram_3780.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-Shift_Position_Indicator_Circuit_Diagram_3780.pdf',
+    ];
+
+    if (isset($legacyFileMapping[$relative])) {
+        $encoded = implode('/', array_map('rawurlencode', explode('/', $legacyFileMapping[$relative])));
+        header('Location: /cars/' . $encoded, true, 301);
+        exit;
+    }
+    if (isset($legacyRedirects[$relative])) {
+        $encoded = implode('/', array_map('rawurlencode', explode('/', $legacyRedirects[$relative])));
+        header('Location: /cars/' . $encoded . '/', true, 301);
+        exit;
+    }
+
     $folderStmt = $db->prepare('SELECT id FROM folders WHERE parent_id <=> ? AND name = ?');
     $parentId = null;
     $resolvedAsFolder = true;
