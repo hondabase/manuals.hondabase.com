@@ -240,17 +240,40 @@ if ($underCars) {
         $parentParts = $carsParts;
         array_pop($parentParts);
         $parentUrl = $parentParts === [] ? '/cars/' : '/cars/' . implode('/', array_map('rawurlencode', $parentParts)) . '/';
-        $directories[] = ['name' => 'Parent Directory', 'path' => $parentUrl, 'icon' => 'arrow_back'];
+        $directories[] = ['name' => 'Parent Directory', 'path' => $parentUrl, 'icon' => 'arrow_back', 'meta' => ''];
     }
 
-    $subFolderStmt = $db->prepare('SELECT name FROM folders WHERE parent_id <=> ? ORDER BY name');
-    $subFolderStmt->execute([$parentId]);
+    $subFolderStmt = $db->prepare('
+        WITH RECURSIVE folder_tree AS (
+            SELECT id, id AS root_id
+            FROM folders
+            WHERE parent_id <=> ?
+            UNION ALL
+            SELECT f.id, ft.root_id
+            FROM folders f
+            JOIN folder_tree ft ON f.parent_id = ft.id
+        )
+        SELECT 
+            f.id,
+            f.name,
+            COUNT(fi.id) AS file_count
+        FROM folders f
+        LEFT JOIN folder_tree ft ON ft.root_id = f.id
+        LEFT JOIN files fi ON fi.folder_id = ft.id
+        WHERE f.parent_id <=> ?
+        GROUP BY f.id, f.name
+        ORDER BY f.name
+    ');
+    $subFolderStmt->execute([$parentId, $parentId]);
     foreach ($subFolderStmt->fetchAll() as $f) {
         $childParts = array_merge($carsParts, [$f['name']]);
+        $count = (int)$f['file_count'];
+        $meta = number_format($count) . ' ' . ($count === 1 ? 'file' : 'files');
         $directories[] = [
             'name' => $f['name'],
             'path' => '/cars/' . implode('/', array_map('rawurlencode', $childParts)) . '/',
-            'icon' => 'folder'
+            'icon' => 'folder',
+            'meta' => $meta
         ];
     }
 
@@ -298,7 +321,8 @@ if ($underCars) {
         $directories[] = [
             'name' => 'Parent Directory',
             'path' => $parentUrl,
-            'icon' => 'arrow_back'
+            'icon' => 'arrow_back',
+            'meta' => ''
         ];
     }
 
@@ -315,10 +339,21 @@ if ($underCars) {
         $urlPath = implode('/', $encodedPathParts);
 
         if (is_dir($fullPath)) {
+            $meta = '';
+            if ($item === 'cars') {
+                try {
+                    $localDb = new PDO(DB_DSN, DB_USER, DB_PASS);
+                    $count = (int)$localDb->query('SELECT COUNT(*) FROM files')->fetchColumn();
+                    $meta = number_format($count) . ' ' . ($count === 1 ? 'file' : 'files');
+                } catch (Exception $e) {
+                    $meta = '';
+                }
+            }
             $directories[] = [
                 'name' => $item,
                 'path' => '/' . $urlPath . '/',
-                'icon' => 'folder'
+                'icon' => 'folder',
+                'meta' => $meta
             ];
         } else {
             $files[] = [
@@ -428,9 +463,9 @@ $loginUrl = 'https://www.hondabase.com/auth/login?return=' . rawurlencode($curre
         }
         .item-row:hover { background: var(--panel-hover); border-color: var(--amber); }
         .item-link { display: flex; align-items: center; flex-grow: 1; min-width: 0; color: inherit; text-decoration: none; }
-        .item-icon { margin-right: 1rem; color: var(--red); font-size: 1.2rem; }
-        .item-name { flex-grow: 1; font-family: var(--font-sans); font-weight: 500; word-break: break-all; }
-        .item-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); white-space: nowrap; margin-left: 1rem; }
+        .item-icon { margin-right: 1rem; color: var(--red); font-size: 1.2rem; flex-shrink: 0; }
+        .item-name { flex-grow: 1; min-width: 0; font-family: var(--font-sans); font-weight: 500; word-break: break-all; }
+        .item-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); white-space: nowrap; margin-left: 1rem; flex-shrink: 0; }
         .favorite-btn {
             display: inline-flex;
             align-items: center;
@@ -505,7 +540,9 @@ $loginUrl = 'https://www.hondabase.com/auth/login?return=' . rawurlencode($curre
                     <a href="<?= $dir['path'] ?>" class="item-row">
                         <span class="material-icons item-icon"><?= $dir['icon'] ?></span>
                         <span class="item-name"><?= htmlspecialchars($dir['name']) ?></span>
-                        <span class="item-meta">Directory</span>
+                        <?php if (!empty($dir['meta'])): ?>
+                            <span class="item-meta"><?= htmlspecialchars($dir['meta']) ?></span>
+                        <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
 
