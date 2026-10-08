@@ -6,9 +6,11 @@ cars/
 
 # Secrets / local config
 config.local.php
+.ssh/
 
 # Runtime log
 indexer.log
+push_failed
 
 # R2 credentials
 .rclone.conf
