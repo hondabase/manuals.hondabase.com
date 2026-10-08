@@ -201,7 +201,11 @@ if ($underCars) {
         if ($i === count($carsParts) - 1) {
             $fileStmt = $db->prepare('SELECT id FROM files WHERE rel_path = ?');
             $fileStmt->execute([implode('/', $carsParts)]);
-            if ($fileStmt->fetch()) {
+            if ($row = $fileStmt->fetch()) {
+                $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                if ($ua === '' || !preg_match('/bot|crawl|spider|slurp|curl|wget|meta-webindexer|hatchfeed|msh-pdfmin|preview|chatgpt/i', $ua)) {
+                    $db->prepare('UPDATE files SET download_count = download_count + 1 WHERE id = ?')->execute([(int)$row['id']]);
+                }
                 $cdnKey = implode('/', array_map('rawurlencode', $carsParts));
                 header('Location: https://cdn.hondabase.com/manuals/' . $cdnKey, true, 302);
                 exit;
@@ -277,14 +281,18 @@ if ($underCars) {
         ];
     }
 
-    $subFileStmt = $db->prepare('SELECT name, size FROM files WHERE folder_id <=> ? ORDER BY name');
+    $subFileStmt = $db->prepare('SELECT name, size, download_count FROM files WHERE folder_id <=> ? ORDER BY name');
     $subFileStmt->execute([$parentId]);
     foreach ($subFileStmt->fetchAll() as $fRow) {
         $childParts = array_merge($carsParts, [$fRow['name']]);
+        $dlCount = (int)($fRow['download_count'] ?? 0);
+        $dlMeta = number_format($dlCount) . ' ' . ($dlCount === 1 ? 'download' : 'downloads');
         $files[] = [
             'name' => $fRow['name'],
             'path' => '/cars/' . implode('/', array_map('rawurlencode', $childParts)),
             'size' => round($fRow['size'] / 1024 / 1024, 2) . ' MB',
+            'downloads' => $dlCount,
+            'dl_meta' => $dlMeta,
             'icon' => 'description'
         ];
     }
@@ -360,6 +368,8 @@ if ($underCars) {
                 'name' => $item,
                 'path' => '/' . $urlPath,
                 'size' => round(filesize($fullPath) / 1024 / 1024, 2) . ' MB',
+                'downloads' => 0,
+                'dl_meta' => '0 downloads',
                 'icon' => 'description'
             ];
         }
@@ -489,7 +499,10 @@ $loginUrl = 'https://www.hondabase.com/auth/login?return=' . rawurlencode($curre
         .section-head h2 { margin: 0; font-size: 1.5rem; }
         
         @media (max-width: 600px) {
-                        .autocomplete-header { flex-direction: column; gap: 0.2rem; }
+            .autocomplete-header { flex-direction: column; gap: 0.2rem; }
+            .item-link { flex-wrap: wrap; row-gap: 0.25rem; }
+            .item-name { width: calc(100% - 2.5rem); }
+            .item-meta { margin-left: 2.2rem; font-size: 0.65rem; }
         }
     </style>
 </head>
@@ -552,7 +565,7 @@ $loginUrl = 'https://www.hondabase.com/auth/login?return=' . rawurlencode($curre
                         <a href="<?= $file['path'] ?>" class="item-link" target="_blank">
                             <span class="material-icons item-icon">description</span>
                             <span class="item-name"><?= htmlspecialchars($file['name']) ?></span>
-                            <span class="item-meta"><?= $file['size'] ?></span>
+                            <span class="item-meta"><?= $file['size'] ?> &middot; <?= htmlspecialchars($file['dl_meta'] ?? '0 downloads') ?></span>
                         </a>
                         <button type="button" class="favorite-btn" title="Save this manual" aria-label="Save <?= htmlspecialchars($file['name']) ?>" aria-pressed="false">
                             <span class="material-icons">star_border</span>
