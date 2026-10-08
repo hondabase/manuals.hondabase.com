@@ -100,9 +100,19 @@ if ($underCars) {
 
     // Legacy redirects (301) for moved or restructured folders/files
     $legacyRedirects = [
+        'honda/civic/1986' => 'honda/civic/1984-1987_3rd_Gen',
+        'honda/civic/1988' => 'honda/civic/1988-1991_4th_Gen',
+        'honda/civic/1988-1990' => 'honda/civic/1988-1991_4th_Gen',
+        'honda/civic/1988-1991' => 'honda/civic/1988-1991_4th_Gen',
+        'honda/civic/1989' => 'honda/civic/1988-1991_4th_Gen',
+        'honda/civic/1990' => 'honda/civic/1988-1991_4th_Gen',
+        'honda/civic/1992-1995' => 'honda/civic/1992-1995_5th_Gen',
+        'honda/civic/1996-2000_Honda_Civic-Corner_light_manual' => 'honda/civic/1996-2000_6th_Gen',
+        'honda/civic/2002-2003' => 'honda/civic/2001-2005_7th_Gen',
         'honda/civic/2011-2016' => 'honda/civic/2012-2015_9th_Gen',
     ];
     $legacyFileMapping = [
+        // 9th Gen
         'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT-Road_Test_3412.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT-Road_Test_3412.pdf',
         'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_Electronic_Control_System_Circuit_Diagram_3777.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_Electronic_Control_System_Circuit_Diagram_3777.pdf',
         'honda/civic/2011-2016/2011-2016_Honda_Civic-CVT_System_Component_Location_Index_4588.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-CVT_System_Component_Location_Index_4588.pdf',
@@ -119,6 +129,51 @@ if ($underCars) {
         'honda/civic/2011-2016/2011-2016_Honda_Civic-PCM_CVT_Control_System_PCM_Connector_for_Inputs_and_Outputs_3776.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-PCM_CVT_Control_System_PCM_Connector_for_Inputs_and_Outputs_3776.pdf',
         'honda/civic/2011-2016/2011-2016_Honda_Civic-RemoteStart.pdf' => 'honda/civic/2012-2015_9th_Gen/2014_Honda_Civic-RemoteStart.pdf',
         'honda/civic/2011-2016/2011-2016_Honda_Civic-Shift_Position_Indicator_Circuit_Diagram_3780.pdf' => 'honda/civic/2012-2015_9th_Gen/2014-2015_Honda_Civic-Shift_Position_Indicator_Circuit_Diagram_3780.pdf',
+
+        // 3rd Gen
+        'honda/civic/1984-1987_Honda_Civic.pdf' => 'honda/civic/1984-1987_3rd_Gen/1984-1987_Honda_Civic.pdf',
+        'honda/civic/1986_Honda_Civic-Supplement.pdf' => 'honda/civic/1984-1987_3rd_Gen/1986_Honda_Civic-Supplement.pdf',
+
+        // 4th Gen (canonical & deduplicated legacy files)
+        'honda/civic/1987_Honda_Civic-Service_Manual-62SH300.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic-Service_Manual-62SH300.pdf',
+        'honda/civic/1988-1991/1988-1991_Honda_Civic-62SH300.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic-Service_Manual-62SH300.pdf',
+        'honda/civic/1988-1991/1988-1991_Honda_Civic-Manual.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic-Service_Manual-62SH300.pdf',
+        'honda/civic/1988-1990/1988-1990_Honda_Civic_CRX-EF-supplement.pdf' => 'honda/civic/1988-1991_4th_Gen/1989-1991_Honda_Civic_CRX-EF-VTEC_Supplement.pdf',
+        'honda/civic/1988-1991/Honda_Civic_EF-VTEC_Supplement.pdf' => 'honda/civic/1988-1991_4th_Gen/1989-1991_Honda_Civic_CRX-EF-VTEC_Supplement.pdf',
+        'honda/civic/1988-1990/1988-1990_Honda_Civic_CRX-Service_Manual_EN.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1990_Honda_Civic_CRX-Service_Manual_EN.pdf',
+        'honda/civic/Honda_CRX-Workshop_Manual.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1990_Honda_Civic_CRX-Service_Manual_EN.pdf',
+        'honda/civic/1988-1991/1988-1991_Honda_Civic_EF-Power_Mirror_Diagram.jpg' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic_EF-Power_Mirror_Diagram.jpg',
+        'honda/civic/1988-1991/1988-1991_Honda_Civic-62SH320.pdf' => 'honda/civic/1988-1991_4th_Gen/1989_Honda_Civic-Supplement-62SH320.pdf',
+        'honda/civic/1989/1989_Honda_Civic-Supplement_Manual-62SH320.PDF' => 'honda/civic/1988-1991_4th_Gen/1989_Honda_Civic-Supplement-62SH320.pdf',
+        'honda/civic/1989/1989_Honda_Civic-Supplement-62SH320.pdf' => 'honda/civic/1988-1991_4th_Gen/1989_Honda_Civic-Supplement-62SH320.pdf',
+        'honda/civic/1988-1991/Honda_Civic_EF8_EF9-Cluster.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic_EF8_EF9-Cluster.pdf',
+        'honda/civic/1988/1988_Honda_Civic_Shuttle-62SH520.pdf' => 'honda/civic/1988-1991_4th_Gen/1988_Honda_Civic_Shuttle-Supplement-62SH520.pdf',
+        'honda/civic/1988/1988_Honda_Civic_Shuttle-Supplement-62SH520.PDF' => 'honda/civic/1988-1991_4th_Gen/1988_Honda_Civic_Shuttle-Supplement-62SH520.pdf',
+        'honda/civic/1989/1989_Honda_Civic_4WD-Supplement-62SH321Z.pdf' => 'honda/civic/1988-1991_4th_Gen/1989-1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321Z.pdf',
+        'honda/civic/1989/1989_Honda_Civic-4WD_Supplement_Manual-62SH321Z.PDF' => 'honda/civic/1988-1991_4th_Gen/1989-1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321Z.pdf',
+        'honda/civic/1990/1990_Honda_Civic_4WD.pdf' => 'honda/civic/1988-1991_4th_Gen/1989-1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321Z.pdf',
+        'honda/civic/1990/1990_Honda_Civic_Shuttle_4WD-62SH321Z.pdf' => 'honda/civic/1988-1991_4th_Gen/1989-1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321Z.pdf',
+        'honda/civic/1990/1990_Honda_Civic_EF9-62SH322.pdf' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_EF9_VTEC-Supplement-62SH322.pdf',
+        'honda/civic/1990/1990_Honda_Civic_VTEC-Supplement-62SH322.pdf' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_EF9_VTEC-Supplement-62SH322.pdf',
+        'honda/civic/1990/1990_Honda_Civic-VTEC_Supplement-62SH322.PDF' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_EF9_VTEC-Supplement-62SH322.pdf',
+        'honda/civic/1990/1990_Honda_Civic_Shuttle_4WD-62SH321.pdf' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321.pdf',
+        'honda/civic/1990/1990_Honda_Civic-Supplement_Manual-62SH321.PDF' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321.pdf',
+        'honda/civic/1990/1990_Honda_Civic-Supplement-62SH321.pdf' => 'honda/civic/1988-1991_4th_Gen/1990_Honda_Civic_Shuttle_4WD-Supplement-62SH321.pdf',
+        'honda/civic/1991_Honda_Civic-ECU_wiring.pdf' => 'honda/civic/1988-1991_4th_Gen/1991_Honda_Civic-ECU_wiring.pdf',
+        'honda/civic/Honda_Civic-AC_Fitting_Instructions.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic-AC_Fitting_Instructions.pdf',
+        'honda/civic/Honda_Civic-EF_Wiring_ED3-ED7_USDM.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic-EF_Wiring_ED3-ED7_USDM.pdf',
+        'honda/civic/Honda_Civic-WPHB_NL.pdf' => 'honda/civic/1988-1991_4th_Gen/1988-1991_Honda_Civic_CRX-Werkplaatshandboek_NL.pdf',
+
+        // 5th Gen
+        'honda/civic/1992-1995/1992-1995_Honda_Civic-USDM.pdf' => 'honda/civic/1992-1995_5th_Gen/1992-1995_Honda_Civic-USDM.pdf',
+        'honda/civic/1992-1995/Honda_Civic_EG-PHFM_Wiring_Diagram_v1pt1_Apr2010.pdf' => 'honda/civic/1992-1995_5th_Gen/1992-1995_Honda_Civic_EG-PHFM_Wiring_Diagram_v1pt1.pdf',
+
+        // 6th Gen
+        'honda/civic/1996-2000_Honda_Civic-Corner_light_manual/101549503_1672657182885670_6505910468231846257_o.jpg' => 'honda/civic/1996-2000_6th_Gen/1996-2000_Honda_Civic-Corner_Light_Manual_01.jpg',
+        'honda/civic/1996-2000_Honda_Civic-Corner_light_manual/101819514_1672657109552344_2675583219336712755_o.jpg' => 'honda/civic/1996-2000_6th_Gen/1996-2000_Honda_Civic-Corner_Light_Manual_02.jpg',
+
+        // 7th Gen
+        'honda/civic/2002-2003/2002-2003_Honda_Civic_EP3-Service_Manual.pdf' => 'honda/civic/2001-2005_7th_Gen/2002-2003_Honda_Civic_EP3-Service_Manual.pdf',
     ];
 
     if (isset($legacyFileMapping[$relative])) {
